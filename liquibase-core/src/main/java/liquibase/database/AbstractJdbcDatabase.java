@@ -1519,6 +1519,12 @@ public abstract class AbstractJdbcDatabase implements Database {
         return dataTypeString;
     }
 
+    @Override
+    public String getDatabaseConnectionClassName(String url)
+    {
+        return JdbcConnection.class.getName();
+    }
+
     public Object get(String key) {
         return attributes.get(key);
     }

@@ -224,6 +224,11 @@ public class OfflineConnection implements DatabaseConnection {
         return false;
     }
 
+    public void openConnection(String url, String username, String password, String driver, String databaseClass, String driverPropertiesFile, String propertyProviderClass, ResourceAccessor resourceAccessor) throws DatabaseException
+    {
+        // no op
+    }
+    
     /**
      * Output Liquibase SQL
      */

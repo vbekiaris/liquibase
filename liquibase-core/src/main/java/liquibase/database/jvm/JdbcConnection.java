@@ -2,13 +2,19 @@ package liquibase.database.jvm;
 
 import liquibase.database.Database;
 import liquibase.database.DatabaseConnection;
+import liquibase.database.DatabaseFactory;
 import liquibase.exception.DatabaseException;
 import liquibase.exception.UnexpectedLiquibaseException;
 import liquibase.logging.LogFactory;
+import liquibase.resource.ResourceAccessor;
+import liquibase.util.StringUtils;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.sql.*;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * A ConnectionWrapper implementation which delegates completely to an
@@ -18,6 +24,10 @@ import java.util.Map;
  */
 public class JdbcConnection implements DatabaseConnection {
     private java.sql.Connection con;
+
+    // Allow instantiation via reflection, without an already constructed java.sql.Connection
+    public JdbcConnection() {
+    }
 
     public JdbcConnection(java.sql.Connection connection) {
         this.con = connection;
@@ -423,6 +433,87 @@ public class JdbcConnection implements DatabaseConnection {
 
     public Connection getUnderlyingConnection() {
         return con;
+    }
+
+    public void openConnection(String url, String username, String password, String driver, String databaseClass,
+                               String driverPropertiesFile, String propertyProviderClass, ResourceAccessor resourceAccessor)
+    throws DatabaseException
+    {
+
+        driver = StringUtils.trimToNull(driver);
+        if (driver == null) {
+            driver = DatabaseFactory.getInstance().findDefaultDriver(url);
+        }
+
+        try {
+            Driver driverObject;
+            DatabaseFactory databaseFactory = DatabaseFactory.getInstance();
+            if (databaseClass != null) {
+                databaseFactory.clearRegistry();
+                databaseFactory.register((Database) Class.forName(databaseClass, true, resourceAccessor.toClassLoader()).newInstance());
+            }
+
+            try {
+                if (driver == null) {
+                    driver = databaseFactory.findDefaultDriver(url);
+                }
+
+                if (driver == null) {
+                    throw new RuntimeException("Driver class was not specified and could not be determined from the url (" + url + ")");
+                }
+
+                driverObject = (Driver) Class.forName(driver, true, resourceAccessor.toClassLoader()).newInstance();
+            } catch (Exception e) {
+                throw new RuntimeException("Cannot find database driver: " + e.getMessage());
+            }
+
+            Properties driverProperties;
+            if (propertyProviderClass == null) {
+                driverProperties = new Properties();
+            } else {
+                driverProperties = (Properties) Class.forName(propertyProviderClass, true, resourceAccessor.toClassLoader()).newInstance();
+            }
+
+            if (username != null) {
+                driverProperties.put("user", username);
+            }
+            if (password != null) {
+                driverProperties.put("password", password);
+            }
+            if (null != driverPropertiesFile) {
+                File propertiesFile = new File(driverPropertiesFile);
+                if (propertiesFile.exists()) {
+//                    System.out.println("Loading properties from the file:'" + driverPropertiesFile + "'");
+                    FileInputStream inputStream = new FileInputStream(propertiesFile);
+                    try {
+                        driverProperties.load(inputStream);
+                    } finally {
+                        inputStream.close();
+                    }
+                } else {
+                    throw new RuntimeException("Can't open JDBC Driver specific properties from the file: '"
+                                               + driverPropertiesFile + "'");
+                }
+            }
+
+
+//            System.out.println("Properties:");
+//            for (Map.Entry entry : driverProperties.entrySet()) {
+//                System.out.println("Key:'"+entry.getKey().toString()+"' Value:'"+entry.getValue().toString()+"'");
+//            }
+
+
+//            System.out.println("Connecting to the URL:'"+url+"' using driver:'"+driverObject.getClass().getName()+"'");
+            Connection connection = driverObject.connect(url, driverProperties);
+//            System.out.println("Connection has been created");
+            if (connection == null) {
+                throw new DatabaseException("Connection could not be created to " + url + " with driver " + driverObject.getClass().getName() + ".  Possibly the wrong driver for the given database URL");
+            }
+
+            this.con = connection;
+        } catch (Exception e) {
+            throw new DatabaseException(e);
+        }
     }
 
     @Override

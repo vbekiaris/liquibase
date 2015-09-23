@@ -124,6 +124,10 @@ public class MockDatabase implements Database, InternalDatabase {
         return false;
     }
 
+    public String getDatabaseConnectionClassName(String url)
+    {
+        return null;
+    }
 
     @Override
     public boolean isCaseSensitive() {

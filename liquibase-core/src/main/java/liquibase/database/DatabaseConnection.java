@@ -1,6 +1,7 @@
 package liquibase.database;
 
 import liquibase.exception.DatabaseException;
+import liquibase.resource.ResourceAccessor;
 
 /**
  * A liquibase abstraction over the normal Connection that is available in
@@ -39,4 +40,13 @@ public interface DatabaseConnection {
     boolean isClosed() throws DatabaseException;
 
     void attached(Database database);
+
+    void openConnection(String url,
+                        String username,
+                        String password,
+                        String driver,
+                        String databaseClass,
+                        String driverPropertiesFile,
+                        String propertyProviderClass,
+                        ResourceAccessor resourceAccessor) throws DatabaseException;
 }

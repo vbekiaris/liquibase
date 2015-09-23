@@ -34,6 +34,11 @@ public interface Database extends PrioritizedService {
      */
     String getDefaultDriver(String url);
 
+    /**
+     * If this database understands the given url, return the DatabaseConnection class name. Otherwise return null.
+     */
+    String getDatabaseConnectionClassName(String url);
+
     DatabaseConnection getConnection();
 
     void setConnection(DatabaseConnection conn);
